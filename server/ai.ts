@@ -402,14 +402,16 @@ Return a JSON object with the following structure:
     const explanation = JSON.parse(response.choices[0].message.content || "{}");
     
     // Save this explanation to the codebase index
-    await updateCodebaseWithExplanation({
+    const codeExplanation: CodeExplanation = {
       path: filePath,
       explanation: explanation.explanation,
       timestamp: new Date().toISOString(),
       complexity: explanation.complexity,
       businessImpact: explanation.businessImpact,
       concepts: explanation.concepts,
-    });
+    };
+    
+    await updateCodebaseWithExplanation(codeExplanation);
     
     return explanation;
   } catch (error: any) {
