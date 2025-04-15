@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { Worker } from "worker_threads";
 import path from "path";
 import { learnCodebase } from "./worker";
-import { generateAIResponse } from "./ai";
+import { generateAIResponse, commentCode, detectBugs, optimizeCode, generateTests } from "./ai";
 import { openFolderDialog, readFileContent, getFileTree } from "./fileManager";
 import type { ChatMessage, CodebaseStatusUpdate, ProjectState, ApiKeys, FileEntry, CodeFile } from "../shared/types";
 
@@ -200,6 +200,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating AI response:", error);
       res.status(500).json({ error: "Failed to generate AI response" });
+    }
+  });
+
+  // AI Code Enhancement Routes
+
+  // Comment code
+  app.post("/api/ai/comment-code", async (req, res) => {
+    try {
+      const { filePath, content, language } = req.body;
+      
+      if (!filePath || !content) {
+        return res.status(400).json({ error: "File path and content are required" });
+      }
+
+      const result = await commentCode(filePath, content, language || 'text');
+      res.json(result);
+    } catch (error) {
+      console.error("Error commenting code:", error);
+      res.status(500).json({ error: error.message || "Failed to comment code" });
+    }
+  });
+
+  // Detect bugs in code
+  app.post("/api/ai/detect-bugs", async (req, res) => {
+    try {
+      const { filePath, content, language } = req.body;
+      
+      if (!filePath || !content) {
+        return res.status(400).json({ error: "File path and content are required" });
+      }
+
+      const result = await detectBugs(filePath, content, language || 'text');
+      res.json(result);
+    } catch (error) {
+      console.error("Error detecting bugs:", error);
+      res.status(500).json({ error: error.message || "Failed to detect bugs" });
+    }
+  });
+
+  // Optimize code
+  app.post("/api/ai/optimize-code", async (req, res) => {
+    try {
+      const { filePath, content, language } = req.body;
+      
+      if (!filePath || !content) {
+        return res.status(400).json({ error: "File path and content are required" });
+      }
+
+      const result = await optimizeCode(filePath, content, language || 'text');
+      res.json(result);
+    } catch (error) {
+      console.error("Error optimizing code:", error);
+      res.status(500).json({ error: error.message || "Failed to optimize code" });
+    }
+  });
+
+  // Generate test cases
+  app.post("/api/ai/generate-tests", async (req, res) => {
+    try {
+      const { filePath, content, language } = req.body;
+      
+      if (!filePath || !content) {
+        return res.status(400).json({ error: "File path and content are required" });
+      }
+
+      const result = await generateTests(filePath, content, language || 'text');
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating tests:", error);
+      res.status(500).json({ error: error.message || "Failed to generate tests" });
     }
   });
 

@@ -94,3 +94,11 @@ export class FileStorage implements IStorage {
 
 // Export a singleton instance of the storage
 export const storage = new FileStorage();
+
+// Make storage globally accessible
+global.storage = storage;
+
+// Global declaration for TypeScript
+declare global {
+  var storage: IStorage;
+}
