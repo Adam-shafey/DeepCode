@@ -1,12 +1,30 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import LeftSidebar from './LeftSidebar';
 import CodeView from './CodeView';
 import AIChat from './AIChat';
 import { useToast } from '@/hooks/use-toast';
 import SettingsModal from './SettingsModal';
-import { Code, Settings } from 'lucide-react';
+import { 
+  Code, 
+  Settings, 
+  Home, 
+  Zap, 
+  Search, 
+  Moon, 
+  Sun,
+  BarChart, 
+  Compass,
+  Braces,
+  GitBranch,
+  Folder,
+  RefreshCw
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { ApiKeys, CodeFile, FileEntry, ChatMessage } from '../../../shared/types';
 
 interface LayoutProps {
@@ -227,15 +245,53 @@ export default function Layout({
     }
   };
 
+  // Add state for current view and theme
+  const [currentView, setCurrentView] = useState<string>("dashboard");
+  const [isDarkTheme, setIsDarkTheme] = useState<boolean>(true);
+  const isMobile = useIsMobile();
+  
+  // Toggle theme function
+  const toggleTheme = () => {
+    setIsDarkTheme(!isDarkTheme);
+    // In a full implementation, this would update the theme in theme.json
+  };
+  
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
-      {/* Header */}
+      {/* Header with enhanced navigation */}
       <header className="flex items-center justify-between px-4 py-2 bg-background border-b border-border">
         <div className="flex items-center space-x-2">
           <Code className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-semibold">DeepCode</h1>
+          <h1 className="text-lg font-semibold bg-gradient-to-r from-primary to-purple-400 text-transparent bg-clip-text">DeepCode</h1>
+          <Badge variant="outline" className="ml-2 text-xs">v0.2</Badge>
         </div>
+        
+        {/* Navigation */}
+        <div className="hidden md:flex items-center space-x-1">
+          <Button 
+            variant={currentView === "dashboard" ? "secondary" : "ghost"} 
+            size="sm"
+            onClick={() => setCurrentView("dashboard")}
+            className="gap-1"
+          >
+            <Home className="h-4 w-4" />
+            Dashboard
+          </Button>
+          <Button 
+            variant={currentView === "editor" ? "secondary" : "ghost"} 
+            size="sm"
+            onClick={() => setCurrentView("editor")}
+            className="gap-1"
+          >
+            <Braces className="h-4 w-4" />
+            Code Editor
+          </Button>
+        </div>
+        
         <div className="flex items-center space-x-2">
+          <Button variant="ghost" size="icon" onClick={toggleTheme} title="Toggle Theme">
+            {isDarkTheme ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </Button>
           <Button variant="ghost" size="icon" onClick={onOpenSettings} title="Settings">
             <Settings className="h-4 w-4" />
           </Button>
@@ -244,42 +300,196 @@ export default function Layout({
 
       {/* Main content area */}
       <main className="flex-1 overflow-hidden">
-        <ResizablePanelGroup direction="horizontal">
-          {/* Left sidebar - Project explorer and codebase index */}
-          <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
-            <LeftSidebar 
-              fileTree={fileTree}
-              onFileSelect={handleFileSelect}
-              onOpenFolder={handleFolderSelect}
-              onLearnCodebase={handleLearnCodebase}
-              codebaseStatus={codebaseStatus}
-              selectedFilePath={selectedFilePath}
-            />
-          </ResizablePanel>
-          
-          <ResizableHandle />
-          
-          {/* Main and bottom panels */}
-          <ResizablePanel defaultSize={80}>
-            <ResizablePanelGroup direction="vertical">
-              {/* Main code view */}
-              <ResizablePanel defaultSize={70} minSize={30}>
-                <CodeView file={selectedFile} />
-              </ResizablePanel>
+        {/* Dashboard View */}
+        {currentView === "dashboard" && (
+          <div className="p-6 h-full overflow-auto">
+            <div className="max-w-7xl mx-auto">
+              <h1 className="text-3xl font-bold mb-6">Welcome to <span className="bg-gradient-to-r from-primary to-purple-400 text-transparent bg-clip-text">DeepCode</span></h1>
               
-              <ResizableHandle />
+              {/* Project Section */}
+              <div className="mb-8">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold">Your Project</h2>
+                  <Button variant="outline" size="sm" onClick={handleFolderSelect}>
+                    {fileTree ? "Change Project" : "Open Project"}
+                  </Button>
+                </div>
+                
+                {fileTree ? (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>{fileTree.name}</CardTitle>
+                      <CardDescription>{fileTree.path}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div className="bg-muted/20 p-4 rounded-lg flex flex-col items-center">
+                          <Braces className="h-10 w-10 text-primary mb-2" />
+                          <span className="text-sm font-medium">Code Files</span>
+                          <span className="text-2xl font-bold">{fileTree.children?.length || 0}</span>
+                        </div>
+                        <div className="bg-muted/20 p-4 rounded-lg flex flex-col items-center">
+                          <GitBranch className="h-10 w-10 text-primary mb-2" />
+                          <span className="text-sm font-medium">Analysis Status</span>
+                          <Badge variant={codebaseStatus === "complete" ? "success" : (codebaseStatus === "learning" ? "default" : "secondary")}>
+                            {codebaseStatus === "learning" && <RefreshCw className="h-3 w-3 mr-1 animate-spin" />}
+                            {codebaseStatus.charAt(0).toUpperCase() + codebaseStatus.slice(1)}
+                          </Badge>
+                        </div>
+                        <div className="bg-muted/20 p-4 rounded-lg flex flex-col items-center">
+                          <BarChart className="h-10 w-10 text-primary mb-2" />
+                          <span className="text-sm font-medium">AI Insights</span>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={handleLearnCodebase}
+                            disabled={codebaseStatus === "learning"}
+                            className="mt-1"
+                          >
+                            {codebaseStatus === "complete" ? "Re-analyze" : "Analyze Now"}
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter>
+                      <Button variant="default" className="w-full" onClick={() => setCurrentView("editor")}>
+                        Open in Editor
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                ) : (
+                  <Card>
+                    <CardContent className="pt-6 flex flex-col items-center">
+                      <div className="rounded-full bg-primary/10 p-4 mb-4">
+                        <Folder className="h-8 w-8 text-primary" />
+                      </div>
+                      <h3 className="text-lg font-medium mb-2">No Project Open</h3>
+                      <p className="text-muted-foreground text-center mb-4">
+                        Open a project folder to start analyzing your code with AI
+                      </p>
+                      <Button onClick={handleFolderSelect}>
+                        Open Folder
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
               
-              {/* Bottom AI chat panel */}
-              <ResizablePanel defaultSize={30} minSize={20}>
-                <AIChat 
-                  conversation={conversation}
-                  onSendMessage={handleSendMessage}
-                />
-              </ResizablePanel>
-            </ResizablePanelGroup>
-          </ResizablePanel>
-        </ResizablePanelGroup>
+              {/* Features Section */}
+              <div className="mb-8">
+                <h2 className="text-xl font-semibold mb-4">Features</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card>
+                    <CardHeader>
+                      <div className="rounded-full bg-blue-500/10 p-2 w-fit mb-2">
+                        <Zap className="h-5 w-5 text-blue-500" />
+                      </div>
+                      <CardTitle>AI Code Analysis</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">Analyze your entire codebase with AI to quickly understand structure and functionality</p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader>
+                      <div className="rounded-full bg-purple-500/10 p-2 w-fit mb-2">
+                        <Search className="h-5 w-5 text-purple-500" />
+                      </div>
+                      <CardTitle>Intelligent Search</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">Ask questions about your code in natural language and get contextual answers</p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader>
+                      <div className="rounded-full bg-pink-500/10 p-2 w-fit mb-2">
+                        <Compass className="h-5 w-5 text-pink-500" />
+                      </div>
+                      <CardTitle>Code Navigation</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">Easily navigate complex codebases with visual file structure and relationships</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      
+        {/* Editor View with code and chat */}
+        {currentView === "editor" && (
+          <ResizablePanelGroup direction="horizontal">
+            {/* Left sidebar - Project explorer and codebase index */}
+            <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+              <LeftSidebar 
+                fileTree={fileTree}
+                onFileSelect={handleFileSelect}
+                onOpenFolder={handleFolderSelect}
+                onLearnCodebase={handleLearnCodebase}
+                codebaseStatus={codebaseStatus}
+                selectedFilePath={selectedFilePath}
+              />
+            </ResizablePanel>
+            
+            <ResizableHandle />
+            
+            {/* Main and bottom panels */}
+            <ResizablePanel defaultSize={80}>
+              <ResizablePanelGroup direction="vertical">
+                {/* Main code view */}
+                <ResizablePanel defaultSize={70} minSize={30}>
+                  <CodeView file={selectedFile} />
+                </ResizablePanel>
+                
+                <ResizableHandle />
+                
+                {/* Bottom AI chat panel */}
+                <ResizablePanel defaultSize={30} minSize={20}>
+                  <AIChat 
+                    conversation={conversation}
+                    onSendMessage={handleSendMessage}
+                  />
+                </ResizablePanel>
+              </ResizablePanelGroup>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        )}
       </main>
+      
+      {/* Mobile bottom navigation */}
+      {isMobile && (
+        <div className="md:hidden border-t border-border p-2 bg-background">
+          <div className="flex justify-around">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCurrentView("dashboard")}
+              className={currentView === "dashboard" ? "text-primary" : ""}
+            >
+              <Home className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCurrentView("editor")}
+              className={currentView === "editor" ? "text-primary" : ""}
+            >
+              <Braces className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onOpenSettings}
+            >
+              <Settings className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
