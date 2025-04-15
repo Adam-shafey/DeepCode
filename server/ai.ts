@@ -345,7 +345,7 @@ Return ONLY the test code, properly formatted for the language.
 
 // Create system prompt for the AI based on project context
 function getSystemPrompt(projectState: ProjectState): string {
-  let systemPrompt = "You are an AI coding assistant for the DeepDe:code application. ";
+  let systemPrompt = "You are an AI coding assistant for the DeepDe :code application. ";
   
   if (projectState.projectPath) {
     systemPrompt += `You are currently helping with a project located at ${projectState.projectPath}. `;
