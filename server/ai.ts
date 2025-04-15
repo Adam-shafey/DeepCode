@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
-import type { ChatMessage, ProjectState, AIModel } from '../shared/types';
+import type { ChatMessage, ProjectState, AIModel, CodeExplanation, DependencyAnalysis } from '../shared/types';
 import fs from 'fs/promises';
+import path from 'path';
 
 // Generate AI response using OpenAI API
 async function generateOpenAIResponse(
@@ -340,6 +341,321 @@ Return ONLY the test code, properly formatted for the language.
   } catch (error: any) {
     console.error("Error generating tests:", error);
     throw new Error(`Failed to generate tests: ${error.message}`);
+  }
+}
+
+// Generate a plain language explanation of code for non-technical stakeholders
+export async function explainCodeForProductManagers(
+  filePath: string,
+  content: string,
+  language: string
+): Promise<{
+  explanation: string;
+  complexity: 'simple' | 'moderate' | 'complex';
+  businessImpact: 'low' | 'medium' | 'high';
+  concepts: string[];
+}> {
+  const apiKey = await getOpenAIKey();
+  const openai = new OpenAI({ apiKey });
+  
+  const systemPrompt = `You are an expert at explaining technical code to non-technical stakeholders like product managers. 
+  
+Your task is to explain the provided ${language} code in plain, non-technical language.
+
+Follow these guidelines:
+1. Explain what the code does in business terms without technical jargon
+2. Highlight the core purpose and functionality
+3. Indicate how this code relates to user features or experiences
+4. Identify any business logic or rules implemented
+5. Suggest potential implications for product decisions
+6. Rate the complexity from a product perspective
+7. Estimate the business impact of this code
+
+Return a JSON object with the following structure:
+{
+  "explanation": "Plain language explanation of the code's purpose and functionality",
+  "complexity": "simple, moderate, or complex",
+  "businessImpact": "low, medium, or high",
+  "concepts": ["List", "of", "key", "concepts", "in", "the", "code"]
+}
+`;
+
+  try {
+    // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt
+        },
+        {
+          role: "user",
+          content: `Here's the ${language} code to explain:\n\n\`\`\`${language}\n${content}\n\`\`\``
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 3000,
+      response_format: { type: "json_object" },
+    });
+    
+    const explanation = JSON.parse(response.choices[0].message.content || "{}");
+    
+    // Save this explanation to the codebase index
+    await updateCodebaseWithExplanation({
+      path: filePath,
+      explanation: explanation.explanation,
+      timestamp: new Date().toISOString(),
+      complexity: explanation.complexity,
+      businessImpact: explanation.businessImpact,
+      concepts: explanation.concepts,
+    });
+    
+    return explanation;
+  } catch (error: any) {
+    console.error("Error explaining code:", error);
+    throw new Error(`Failed to explain code: ${error.message}`);
+  }
+}
+
+// Analyze dependencies within a codebase
+export async function analyzeDependencies(
+  projectPath: string
+): Promise<{
+  projectDependencies: {
+    name: string;
+    version: string;
+    description: string;
+    usageLocations: string[];
+    alternatives?: string[];
+    securityIssues?: string[];
+    isOutdated?: boolean;
+  }[];
+  internalDependencies: {
+    sourcePath: string;
+    targetPath: string;
+    type: 'import' | 'reference' | 'inheritance' | 'implementation';
+    importance: 'low' | 'medium' | 'high';
+  }[];
+  summary: string;
+}> {
+  const apiKey = await getOpenAIKey();
+  const openai = new OpenAI({ apiKey });
+  
+  try {
+    // 1. Analyze package.json, requirements.txt, or other dependency files
+    let dependencyFiles: {path: string, content: string}[] = [];
+    let fileList: string[] = [];
+    
+    try {
+      // Read package.json if it exists
+      const packageJsonPath = path.join(projectPath, 'package.json');
+      const packageJsonContent = await fs.readFile(packageJsonPath, 'utf-8');
+      dependencyFiles.push({
+        path: 'package.json',
+        content: packageJsonContent
+      });
+      
+      // Add additional dependency files based on project type
+      // e.g., requirements.txt for Python, Cargo.toml for Rust, etc.
+    } catch (err) {
+      console.log("No package.json found, skipping package analysis");
+    }
+    
+    // 2. Scan for import statements in source files
+    // Get a list of source files
+    const getSourceFiles = async (dir: string, fileList: string[] = []): Promise<string[]> => {
+      const files = await fs.readdir(dir);
+      
+      for (const file of files) {
+        const filePath = path.join(dir, file);
+        const stat = await fs.stat(filePath);
+        
+        if (stat.isDirectory() && !file.startsWith('.') && file !== 'node_modules') {
+          fileList = await getSourceFiles(filePath, fileList);
+        } else {
+          const ext = path.extname(file).toLowerCase();
+          if (['.js', '.jsx', '.ts', '.tsx', '.py', '.java'].includes(ext)) {
+            fileList.push(filePath);
+          }
+        }
+      }
+      
+      return fileList;
+    };
+    
+    try {
+      fileList = await getSourceFiles(projectPath);
+    } catch (err) {
+      console.error("Error scanning source files:", err);
+    }
+    
+    // 3. Extract a sample of import statements from files
+    const importSamples: string[] = [];
+    const maxSamples = 50;
+    
+    for (const filePath of fileList.slice(0, maxSamples)) {
+      try {
+        const content = await fs.readFile(filePath, 'utf-8');
+        const relativePath = path.relative(projectPath, filePath);
+        
+        // Simple regex to find import statements (would need to be adjusted for different languages)
+        const jsImportRegex = /import\s+.*?from\s+['"](.+?)['"]/g;
+        const requireRegex = /require\s*\(\s*['"](.+?)['"]\s*\)/g;
+        
+        let match;
+        const imports: string[] = [];
+        
+        while ((match = jsImportRegex.exec(content)) !== null) {
+          imports.push(match[0]);
+        }
+        
+        while ((match = requireRegex.exec(content)) !== null) {
+          imports.push(match[0]);
+        }
+        
+        if (imports.length > 0) {
+          importSamples.push(`File: ${relativePath}\nImports:\n${imports.join('\n')}`);
+        }
+      } catch (err) {
+        console.error(`Error processing file ${filePath}:`, err);
+      }
+    }
+    
+    // 4. Send to OpenAI for analysis
+    const systemPrompt = `You are an expert in dependency analysis and software architecture. 
+    
+Your task is to analyze project dependencies and internal code dependencies to provide insights for product managers.
+
+Based on the provided dependency files and import statements, create a comprehensive analysis that helps product managers understand:
+1. External library dependencies and their purposes
+2. Internal code dependencies and relationships
+3. Potential security issues, technical debt, or optimization opportunities
+4. Business-relevant insights about the codebase structure
+
+Return a JSON object with the following structure:
+{
+  "projectDependencies": [
+    {
+      "name": "dependency-name",
+      "version": "version",
+      "description": "What this dependency does in business terms",
+      "usageLocations": ["paths/to/files/using/it"],
+      "alternatives": ["alternative-library-1", "alternative-library-2"],
+      "securityIssues": ["description of any security concerns"],
+      "isOutdated": true/false
+    }
+  ],
+  "internalDependencies": [
+    {
+      "sourcePath": "path/to/source/file",
+      "targetPath": "path/to/imported/file",
+      "type": "import/reference/inheritance/implementation",
+      "importance": "low/medium/high"
+    }
+  ],
+  "summary": "Overall assessment of the project dependencies and structure from a product perspective"
+}`;
+
+    // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt
+        },
+        {
+          role: "user",
+          content: `
+Project Path: ${projectPath}
+
+Dependency Files:
+${dependencyFiles.map(file => `*** ${file.path} ***\n${file.content}`).join('\n\n')}
+
+Import Samples:
+${importSamples.join('\n\n')}
+
+Please analyze these dependencies and provide insights for product managers.
+          `
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 4000,
+      response_format: { type: "json_object" },
+    });
+    
+    const analysis = JSON.parse(response.choices[0].message.content || "{}");
+    
+    // 5. Save the analysis to the codebase index
+    await updateCodebaseWithDependencyAnalysis({
+      timestamp: new Date().toISOString(),
+      projectDependencies: analysis.projectDependencies,
+      internalDependencies: analysis.internalDependencies,
+      summary: analysis.summary
+    });
+    
+    return analysis;
+  } catch (error: any) {
+    console.error("Error analyzing dependencies:", error);
+    throw new Error(`Failed to analyze dependencies: ${error.message}`);
+  }
+}
+
+// Helper function to update the codebase index with a code explanation
+async function updateCodebaseWithExplanation(explanation: CodeExplanation): Promise<void> {
+  try {
+    const projectState = await global.storage?.getProjectState();
+    
+    if (!projectState || !projectState.codebaseIndex) {
+      console.error("No codebase index available to update");
+      return;
+    }
+    
+    // Add this explanation to the codebase index
+    if (!projectState.codebaseIndex.codeExplanations) {
+      projectState.codebaseIndex.codeExplanations = [];
+    }
+    
+    // Check if an explanation for this file already exists
+    const existingIndex = projectState.codebaseIndex.codeExplanations.findIndex(
+      exp => exp.path === explanation.path
+    );
+    
+    if (existingIndex >= 0) {
+      // Update existing explanation
+      projectState.codebaseIndex.codeExplanations[existingIndex] = explanation;
+    } else {
+      // Add new explanation
+      projectState.codebaseIndex.codeExplanations.push(explanation);
+    }
+    
+    // Save updated project state
+    await global.storage?.saveProjectState(projectState);
+    
+  } catch (error) {
+    console.error("Error updating codebase with explanation:", error);
+  }
+}
+
+// Helper function to update the codebase index with dependency analysis
+async function updateCodebaseWithDependencyAnalysis(analysis: DependencyAnalysis): Promise<void> {
+  try {
+    const projectState = await global.storage?.getProjectState();
+    
+    if (!projectState || !projectState.codebaseIndex) {
+      console.error("No codebase index available to update");
+      return;
+    }
+    
+    // Add the dependency analysis to the codebase index
+    projectState.codebaseIndex.dependencyAnalytics = analysis;
+    
+    // Save updated project state
+    await global.storage?.saveProjectState(projectState);
+    
+  } catch (error) {
+    console.error("Error updating codebase with dependency analysis:", error);
   }
 }
 

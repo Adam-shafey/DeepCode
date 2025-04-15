@@ -67,3 +67,38 @@ export interface CodeFile {
   content: string;
   language?: string;
 }
+
+// Code explanation
+export interface CodeExplanation {
+  path: string;
+  explanation: string;
+  timestamp: string;
+  complexity: 'simple' | 'moderate' | 'complex';
+  businessImpact: 'low' | 'medium' | 'high';
+  concepts: string[];
+}
+
+// Dependency Analytics
+export interface DependencyAnalysis {
+  timestamp: string;
+  projectDependencies: Dependency[];
+  internalDependencies: FileDependency[];
+  summary: string;
+}
+
+export interface Dependency {
+  name: string;
+  version: string;
+  description: string;
+  usageLocations: string[];
+  alternatives?: string[];
+  securityIssues?: string[];
+  isOutdated?: boolean;
+}
+
+export interface FileDependency {
+  sourcePath: string;
+  targetPath: string;
+  type: 'import' | 'reference' | 'inheritance' | 'implementation';
+  importance: 'low' | 'medium' | 'high';
+}

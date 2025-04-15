@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { Worker } from "worker_threads";
 import path from "path";
 import { learnCodebase } from "./worker";
-import { generateAIResponse, commentCode, detectBugs, optimizeCode, generateTests } from "./ai";
+import { generateAIResponse, commentCode, detectBugs, optimizeCode, generateTests, explainCodeForProductManagers, analyzeDependencies } from "./ai";
 import { openFolderDialog, readFileContent, getFileTree } from "./fileManager";
 import type { ChatMessage, CodebaseStatusUpdate, ProjectState, ApiKeys, FileEntry, CodeFile } from "../shared/types";
 
@@ -216,7 +216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const result = await commentCode(filePath, content, language || 'text');
       res.json(result);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error commenting code:", error);
       res.status(500).json({ error: error.message || "Failed to comment code" });
     }
@@ -233,7 +233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const result = await detectBugs(filePath, content, language || 'text');
       res.json(result);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error detecting bugs:", error);
       res.status(500).json({ error: error.message || "Failed to detect bugs" });
     }
@@ -250,7 +250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const result = await optimizeCode(filePath, content, language || 'text');
       res.json(result);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error optimizing code:", error);
       res.status(500).json({ error: error.message || "Failed to optimize code" });
     }
@@ -267,9 +267,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const result = await generateTests(filePath, content, language || 'text');
       res.json(result);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating tests:", error);
       res.status(500).json({ error: error.message || "Failed to generate tests" });
+    }
+  });
+
+  // Explain code for product managers
+  app.post("/api/ai/explain-code", async (req, res) => {
+    try {
+      const { filePath, content, language } = req.body;
+      
+      if (!filePath || !content) {
+        return res.status(400).json({ error: "File path and content are required" });
+      }
+
+      const result = await explainCodeForProductManagers(filePath, content, language || 'text');
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error explaining code:", error);
+      res.status(500).json({ error: error.message || "Failed to explain code" });
+    }
+  });
+
+  // Analyze project dependencies
+  app.post("/api/ai/analyze-dependencies", async (req, res) => {
+    try {
+      const projectState = await storage.getProjectState();
+      
+      if (!projectState?.projectPath) {
+        return res.status(400).json({ error: "No project folder selected" });
+      }
+
+      const result = await analyzeDependencies(projectState.projectPath);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error analyzing dependencies:", error);
+      res.status(500).json({ error: error.message || "Failed to analyze dependencies" });
+    }
+  });
+
+  // Get code explanations from codebase index
+  app.get("/api/codebase/explanations", async (req, res) => {
+    try {
+      const projectState = await storage.getProjectState();
+      
+      if (!projectState?.codebaseIndex?.codeExplanations) {
+        return res.json({ explanations: [] });
+      }
+
+      res.json({ explanations: projectState.codebaseIndex.codeExplanations });
+    } catch (error: any) {
+      console.error("Error getting code explanations:", error);
+      res.status(500).json({ error: error.message || "Failed to get code explanations" });
+    }
+  });
+
+  // Get dependency analytics from codebase index
+  app.get("/api/codebase/dependencies", async (req, res) => {
+    try {
+      const projectState = await storage.getProjectState();
+      
+      if (!projectState?.codebaseIndex?.dependencyAnalytics) {
+        return res.json({ dependencies: null });
+      }
+
+      res.json({ dependencies: projectState.codebaseIndex.dependencyAnalytics });
+    } catch (error: any) {
+      console.error("Error getting dependency analytics:", error);
+      res.status(500).json({ error: error.message || "Failed to get dependency analytics" });
     }
   });
 
