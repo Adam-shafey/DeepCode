@@ -21,7 +21,11 @@ import {
   Wrench,
   FileLineChart,
   TestTube,
-  Brain
+  Brain,
+  BookOpen,
+  Briefcase,
+  LineChart,
+  Network
 } from 'lucide-react';
 import type { CodeFile } from '../../../shared/types';
 
@@ -248,6 +252,93 @@ export default function CodeView({ file }: CodeViewProps) {
     }
   };
   
+  // AI action to explain code for product managers
+  const handleExplainCode = async () => {
+    if (!file) return;
+    
+    try {
+      setIsProcessing(true);
+      setCurrentAction("explaining code");
+      
+      // Send file content to server for AI processing
+      const response = await fetch('/api/ai/explain-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          filePath: file.path,
+          content: file.content,
+          language: file.language
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to explain code");
+      }
+      
+      const result = await response.json();
+      
+      // Success toast
+      toast({
+        title: "Code Explanation Added",
+        description: "Created business-friendly explanation of this code",
+      });
+      
+      // Show a modal with the explanation or update learning panel
+      
+    } catch (error: any) {
+      console.error("Error explaining code:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to explain code",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+      setCurrentAction(null);
+    }
+  };
+  
+  // AI action to analyze project dependencies
+  const handleAnalyzeDependencies = async () => {
+    try {
+      setIsProcessing(true);
+      setCurrentAction("analyzing dependencies");
+      
+      // Send request to analyze dependencies
+      const response = await fetch('/api/ai/analyze-dependencies', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to analyze dependencies");
+      }
+      
+      const result = await response.json();
+      
+      // Success toast
+      toast({
+        title: "Dependency Analysis Complete",
+        description: "Analyzed project dependencies and added to learning panel",
+      });
+      
+    } catch (error: any) {
+      console.error("Error analyzing dependencies:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to analyze dependencies",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+      setCurrentAction(null);
+    }
+  };
+  
   // Close a tab
   const closeTab = (path: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -312,7 +403,10 @@ export default function CodeView({ file }: CodeViewProps) {
                         <ChevronDown className="ml-1 h-3.5 w-3.5" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
+                    <DropdownMenuContent align="end" className="w-56">
+                      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                        Engineering
+                      </div>
                       <DropdownMenuItem onClick={handleCommentCode}>
                         <MessageSquare className="mr-2 h-4 w-4" />
                         <span>Document Code</span>
@@ -328,6 +422,18 @@ export default function CodeView({ file }: CodeViewProps) {
                       <DropdownMenuItem onClick={handleGenerateTests}>
                         <TestTube className="mr-2 h-4 w-4" />
                         <span>Generate Tests</span>
+                      </DropdownMenuItem>
+
+                      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground mt-2">
+                        Product Management
+                      </div>
+                      <DropdownMenuItem onClick={handleExplainCode} className="text-blue-500 hover:text-blue-600">
+                        <BookOpen className="mr-2 h-4 w-4" />
+                        <span>Explain in Business Terms</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleAnalyzeDependencies} className="text-blue-500 hover:text-blue-600">
+                        <Network className="mr-2 h-4 w-4" />
+                        <span>Analyze Dependencies</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -360,6 +466,8 @@ export default function CodeView({ file }: CodeViewProps) {
                       {currentAction === 'detecting bugs' && 'Analyzing your code for potential issues...'}
                       {currentAction === 'optimizing' && 'Optimizing your code for better performance...'}
                       {currentAction === 'generating tests' && 'Creating comprehensive tests for your code...'}
+                      {currentAction === 'explaining code' && 'Creating a business-friendly explanation...'}
+                      {currentAction === 'analyzing dependencies' && 'Analyzing project dependencies...'}
                     </p>
                   </div>
                 </div>

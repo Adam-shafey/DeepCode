@@ -1,11 +1,30 @@
 import { useState, useEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { Folder, FolderOpen, FileCode, File, ChevronDown, ChevronRight, RefreshCw } from 'lucide-react';
+import { 
+  Folder, 
+  FolderOpen, 
+  FileCode, 
+  File, 
+  ChevronDown, 
+  ChevronRight, 
+  RefreshCw,
+  BookOpen,
+  Network,
+  Briefcase,
+  Code
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import type { FileEntry } from '../../../shared/types';
+import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import type { FileEntry, CodeExplanation, DependencyAnalysis } from '../../../shared/types';
 
 interface LeftSidebarProps {
   fileTree: FileEntry | null;
@@ -26,6 +45,9 @@ export default function LeftSidebar({
 }: LeftSidebarProps) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [codebaseIndex, setCodebaseIndex] = useState<any | null>(null);
+  const [codeExplanations, setCodeExplanations] = useState<CodeExplanation[]>([]);
+  const [dependencyAnalytics, setDependencyAnalytics] = useState<DependencyAnalysis | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("engineering");
   
   // Fetch codebase index when component loads
   useEffect(() => {
