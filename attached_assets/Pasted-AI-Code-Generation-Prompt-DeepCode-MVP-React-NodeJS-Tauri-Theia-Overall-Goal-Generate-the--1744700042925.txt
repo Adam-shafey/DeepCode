@@ -1,0 +1,84 @@
+AI Code Generation Prompt: DeepCode MVP (React + NodeJS + Tauri + Theia)
+Overall Goal: Generate the Minimum Viable Product (MVP) codebase for "DeepCode". This desktop app (via Tauri) uses React (with shadcn/ui) for the frontend, NodeJS for the backend (state, file ops, AI calls), and integrates Theia IDE Framework for code viewing. Focus on core functionality, basic error handling, and a modular structure for future expansion.
+
+Core Technologies (MUST HAVE):
+
+Frontend: React (functional components, hooks)
+
+UI Components: shadcn/ui (include basic setup)
+
+Backend: NodeJS (LTS)
+
+Desktop Packaging: Tauri
+
+Core Editor: Theia IDE Framework (Note: Integration complexity remains; provide a basic setup showing Theia rendering within a React component, perhaps via iframe/webview).
+
+Frontend MVP Requirements (MUST HAVE):
+
+Layout: Basic multi-panel layout (e.g., Left Sidebar: Index, Main: Code View, Right/Bottom Panel: AI Chat). Use shadcn/ui layout components (like Resizable).
+
+AI Actions Panel:
+
+Use basic shadcn/ui components (e.g., Input, Button, ScrollArea) for chat input and displaying conversation history (user prompts, AI responses).
+
+Integrate with backend via Tauri IPC to send prompts and receive AI responses.
+
+Codebase Index Panel:
+
+Include a Button (shadcn/ui) for user to select a folder and trigger the "Learning the codebase" backend process via IPC.
+
+Display a simple status indicator (e.g., "Learning...", "Idle", "Error") based on backend communication.
+
+Display the AI-generated summary/index text received from the backend.
+
+Code View Panel:
+
+Basic integration of Theia IDE Framework to display code content passed from the backend or opened via simple interactions. Focus on displaying code for the MVP.
+
+API Key Input: A simple Modal or Settings section (using shadcn/ui Dialog/Input) to input and save OpenAI/Gemini keys, passing them securely to the backend via IPC.
+
+Loading States: Basic loading indicators (e.g., shadcn/ui Skeleton or Spinner) on panels when waiting for backend responses (e.g., during "Learning codebase", AI generation).
+
+Error Handling: Implement a root React Error Boundary. Use simple shadcn/ui Toasts or Alerts to display user-friendly messages for errors received from the backend via IPC.
+
+Backend MVP Requirements (MUST HAVE):
+
+Project Structure: Clean NodeJS project structure.
+
+Tauri Integration: Configure NodeJS backend communication with the React frontend using Tauri IPC (invoke, listen).
+
+Multithreading: Use a NodeJS worker_thread only for the "Learning the codebase" process to avoid blocking. Communicate start/progress(simple status)/completion/error back via IPC.
+
+AI API Calls: Services/modules to call OpenAI and Gemini APIs using keys provided via IPC. Include basic error handling for API calls (catch exceptions, report errors back via IPC).
+
+File-Based Project State: Implement a storage.js module with a clear interface (saveProjectState, loadProjectState) to save/load essential state (e.g., codebase index result, settings) to a local file (e.g., .deepcode/project.json). Store API keys securely if possible using Tauri APIs, otherwise note the security limitation.
+
+State Management & Synchronization: Use Tauri IPC for essential frontend-backend communication (trigger actions, send results/errors/status).
+
+Error Handling: Basic try/catch in IPC handlers and async operations. Log errors to the console and send user-friendly error indicators/messages to the frontend via IPC.
+
+General MVP Requirements (MUST HAVE):
+
+Modularity: Organize code logically for future expansion.
+
+Basic Error Checking: Handle obvious errors (e.g., failed API calls, file access issues).
+
+Basic Comments: Add comments for key functions/modules.
+
+Tauri Setup: Include necessary Tauri configuration for the build.
+
+Deferred Features (Add Later):
+
+Python script integration.
+
+Advanced chat UI/features.
+
+Detailed progress indicators.
+
+Advanced Theia controls/features.
+
+Sophisticated state management (beyond basic IPC).
+
+Database integration (replacing file storage module).
+
+Output: Provide the complete MVP file structure and code, ready for install (npm install or yarn install) and run (npm run tauri dev or yarn tauri dev).
