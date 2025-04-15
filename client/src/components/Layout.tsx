@@ -262,8 +262,12 @@ export default function Layout({
       <header className="flex items-center justify-between px-4 py-2 bg-background border-b border-border">
         <div className="flex items-center space-x-2">
           <Code className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-semibold bg-gradient-to-r from-primary to-purple-400 text-transparent bg-clip-text">DeepCode</h1>
-          <Badge variant="outline" className="ml-2 text-xs">v0.2</Badge>
+          <h1 className="text-lg font-semibold">
+            <span className="bg-gradient-to-r from-primary to-purple-400 text-transparent bg-clip-text">DeepDe</span>
+            <span className="text-primary">:</span>
+            <span className="bg-gradient-to-r from-purple-400 to-pink-500 text-transparent bg-clip-text">code</span>
+          </h1>
+          <Badge variant="outline" className="ml-2 text-xs">v0.3</Badge>
         </div>
         
         {/* Navigation */}
@@ -304,7 +308,11 @@ export default function Layout({
         {currentView === "dashboard" && (
           <div className="p-6 h-full overflow-auto">
             <div className="max-w-7xl mx-auto">
-              <h1 className="text-3xl font-bold mb-6">Welcome to <span className="bg-gradient-to-r from-primary to-purple-400 text-transparent bg-clip-text">DeepCode</span></h1>
+              <h1 className="text-3xl font-bold mb-6">Welcome to 
+                <span className="bg-gradient-to-r from-primary to-purple-400 text-transparent bg-clip-text">DeepDe</span>
+                <span className="text-primary">:</span>
+                <span className="bg-gradient-to-r from-purple-400 to-pink-500 text-transparent bg-clip-text">code</span>
+              </h1>
               
               {/* Project Section */}
               <div className="mb-8">
