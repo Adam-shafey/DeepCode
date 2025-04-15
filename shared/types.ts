@@ -18,6 +18,8 @@ export interface CodebaseIndex {
   summary: string;
   keyComponents: KeyComponent[];
   coreFunctionality: CoreFunctionality[];
+  codeExplanations?: CodeExplanation[];
+  dependencyAnalytics?: DependencyAnalysis;
 }
 
 export interface KeyComponent {
